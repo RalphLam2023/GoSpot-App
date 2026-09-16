@@ -75,63 +75,53 @@ CITY_COORDINATES = {
 }
 
 # --- DATABASE MANAGEMENT (JSON) ---
-DB_FILE = "parking_data.json"
+DB_FILE = "gospot_db.json"
 
-def load_data():
-    """Loads parking data from JSON file or creates it if it doesn't exist."""
+def load_db():
     if os.path.exists(DB_FILE):
         with open(DB_FILE, "r") as f:
             return json.load(f)
     else:
-        default_data = [
-            {
-                "id": 1,
-                "owner_name": "Bayleaf Hotel",
-                "name": "Bayleaf Hotel Parking",
-                "city": "Manila",
-                "address": "Muralla St corner Victoria St, Intramuros, Manila",
-                "lat": 14.5898, "lon": 120.9754,
-                "price": 150.0, "total_capacity": 80, "current_free_slots": 25,
-                "lighting": True, "cctv": True, "pwd": True, "commends": 42,
-                "reviews": [{"user": "StudentCommuter", "comment": "Very secure and safe hotel basement."}]
-            },
-            {
-                "id": 2,
-                "owner_name": "Ayala Property Mgmt",
-                "name": "Legazpi Village Commercial Parking",
-                "city": "Makati",
-                "address": "Salcedo St, Legazpi Village, Makati",
-                "lat": 14.5532, "lon": 121.0185,
-                "price": 80.0, "total_capacity": 60, "current_free_slots": 22,
-                "lighting": True, "cctv": True, "pwd": True, "commends": 34,
-                "reviews": [{"user": "AnthonyUy", "comment": "Spacious slots and reliable security guards."}]
-            },
-            {
-                "id": 3,
-                "owner_name": "QC LGU Admin",
-                "name": "Timog Avenue Secure Lot",
-                "city": "Quezon City",
-                "address": "Timog Ave cor. Tomas Morato, Quezon City",
-                "lat": 14.6360, "lon": 121.0345,
-                "price": 60.0, "total_capacity": 30, "current_free_slots": 5,
-                "lighting": True, "cctv": True, "pwd": False, "commends": 9,
-                "reviews": [{"user": "QC_Driver", "comment": "Tight slots, but convenient for restaurants nearby."}]
-            }
-        ]
-        save_data(default_data)
-        return default_data
+        default_db = {
+            "lots": [
+                {
+                    "id": 1, "owner_name": "Bayleaf Hotel", "name": "Bayleaf Hotel Parking",
+                    "city": "Manila", "address": "Muralla St corner Victoria St, Intramuros, Manila",
+                    "lat": 14.5898, "lon": 120.9754, "price": 150.0, "total_capacity": 80, 
+                    "current_free_slots": 25, "lighting": True, "cctv": True, "pwd": True, "commends": 42,
+                    "reviews": []
+                },
+                {
+                    "id": 2, "owner_name": "Ayala Property Mgmt", "name": "Legazpi Village Commercial Parking",
+                    "city": "Makati", "address": "Salcedo St, Legazpi Village, Makati",
+                    "lat": 14.5532, "lon": 121.0185, "price": 80.0, "total_capacity": 60, 
+                    "current_free_slots": 22, "lighting": True, "cctv": True, "pwd": True, "commends": 34,
+                    "reviews": []
+                },
+                {
+                    "id": 3, "owner_name": "QC LGU Admin", "name": "Timog Avenue Secure Lot",
+                    "city": "Quezon City", "address": "Timog Ave cor. Tomas Morato, Quezon City",
+                    "lat": 14.6360, "lon": 121.0345, "price": 60.0, "total_capacity": 30, 
+                    "current_free_slots": 5, "lighting": True, "cctv": True, "pwd": False, "commends": 9,
+                    "reviews": []
+                }
+            ],
+            "history": {} # Format: {"Username": [{"lot_id": 1, "timestamp": "..."}]}
+        }
+        save_db(default_db)
+        return default_db
 
-def save_data(data):
-    """Saves the parking list to the JSON file."""
+def save_db(db):
     with open(DB_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+        json.dump(db, f, indent=4)
 
+# --- SESSION STATE INITIALIZATION ---
 if "role" not in st.session_state:
     st.session_state.role = None  
-
-if "parking_lots_v3" not in st.session_state:
-    st.session_state.parking_lots_v3 = load_data()
-
+if "user_name" not in st.session_state:
+    st.session_state.user_name = None
+if "db" not in st.session_state:
+    st.session_state.db = load_db()
 
 # --- APP HEADER ---
 col_left, col_center, col_right = st.columns([2, 1, 2])
@@ -145,7 +135,7 @@ st.markdown("---")
 
 
 # ==========================================
-# PAGE 0: LANDING PAGE
+# PAGE 0: LANDING PAGE (ROLE SELECTION)
 # ==========================================
 if st.session_state.role is None:
     st.markdown("<h2 style='text-align: center;'>I am a:</h2>", unsafe_allow_html=True)
@@ -156,7 +146,7 @@ if st.session_state.role is None:
         st.markdown('<div class="landing-btn">', unsafe_allow_html=True)
         if st.button("Driver", use_container_width=True, type="primary"):
             st.session_state.role = 'driver'
-            st.session_state.parking_lots_v3 = load_data()
+            st.session_state.db = load_db()
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
             
@@ -164,150 +154,216 @@ if st.session_state.role is None:
         st.markdown('<div class="landing-btn">', unsafe_allow_html=True)
         if st.button("Parking Owner", use_container_width=True, type="primary"):
             st.session_state.role = 'owner'
-            st.session_state.parking_lots_v3 = load_data()
+            st.session_state.db = load_db()
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# PAGE 1: DRIVER INTERFACE
+# PAGE 1: LOGIN SCREEN
 # ==========================================
-elif st.session_state.role == 'driver':
+elif st.session_state.role is not None and st.session_state.user_name is None:
     col_back, _ = st.columns([1, 5])
     with col_back:
-        if st.button("⬅️ Back to Home", use_container_width=True):
+        if st.button("⬅️ Back"):
             st.session_state.role = None
             st.rerun()
 
-    st.subheader("Find & Compare Nearby Parking Spots")
-
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        destination_address = st.text_input("📍 Enter your destination address:", placeholder="e.g. Intramuros Manila, Greenbelt Makati")
-    with col2:
-        target_city = st.selectbox("Select Target City:", ["Manila", "Makati", "Quezon City"])
-
-    col3, col4 = st.columns(2)
-    with col3:
-        target_time = st.time_input("Expected Arrival Time", datetime.time(8, 0))
-    with col4:
-        day_of_week = st.selectbox("Day of Week", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
-
-    search_button = st.button("Search Nearest Parking", type="primary", use_container_width=True)
-
-    if search_button or destination_address:
-        base_lat, base_lon = CITY_COORDINATES[target_city]
-        driver_lat, driver_lon = base_lat, base_lon
-        lots_display = []
-        city_code_map = {"Manila": 0, "Makati": 1, "Quezon City": 2}
-        day_code_map = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6}
-        time_minutes = target_time.hour * 60 + target_time.minute
-
-        for lot in st.session_state.parking_lots_v3:
-            dist_km = haversine(driver_lat, driver_lon, lot["lat"], lot["lon"])
-            if model:
-                features = pd.DataFrame([{'day_of_week': day_code_map[day_of_week], 'time_of_day_minute': time_minutes, 'total_capacity': lot["total_capacity"], 'city_code': city_code_map.get(lot["city"], 0)}])
-                pred_occ = float(model.predict(features)[0])
-                pred_occ = max(0.0, min(1.0, pred_occ))
-                availability_pct = round((1 - pred_occ) * 100, 1)
+    st.markdown(f"<h3 style='text-align: center;'>{st.session_state.role.capitalize()} Login</h3>", unsafe_allow_html=True)
+    
+    col_log1, col_log2, col_log3 = st.columns([1, 2, 1])
+    with col_log2:
+        st.write("Please enter your name to access your dashboard:")
+        entered_name = st.text_input("Full Name or Handle", placeholder="e.g. Juan Dela Cruz")
+        if st.button("Log In", type="primary", use_container_width=True):
+            if entered_name.strip():
+                st.session_state.user_name = entered_name.strip()
+                st.rerun()
             else:
-                availability_pct = round((lot["current_free_slots"] / lot["total_capacity"]) * 100, 1)
+                st.error("Please enter a valid name.")
 
-            lots_display.append({**lot, "distance_km": dist_km, "predicted_avail": availability_pct})
+# ==========================================
+# PAGE 2: DRIVER DASHBOARD
+# ==========================================
+elif st.session_state.role == 'driver' and st.session_state.user_name is not None:
+    col_back, _ = st.columns([1, 5])
+    with col_back:
+        if st.button("⬅️ Log Out", use_container_width=True):
+            st.session_state.role = None
+            st.session_state.user_name = None
+            st.rerun()
 
-        lots_display = sorted(lots_display, key=lambda x: x["distance_km"])
-        st.markdown(f"### 🎯 Results Near: **{destination_address if destination_address else target_city}**")
+    st.subheader(f"👋 Welcome, {st.session_state.user_name}!")
+    
+    tab1, tab2 = st.tabs(["🔍 Find Parking", "🕒 Recent Parkings"])
+    
+    with tab1:
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            destination_address = st.text_input("📍 Enter your destination address:", placeholder="e.g. Intramuros Manila")
+        with col2:
+            target_city = st.selectbox("Select Target City:", ["Manila", "Makati", "Quezon City"])
 
-        for lot in lots_display:
-            with st.container():
-                st.markdown(f"#### 🏢 {lot['name']}")
-                st.caption(f"📍 {lot['address']} ({lot['city']}) | **Managed by: {lot.get('owner_name', 'Independent')}**")
+        col3, col4 = st.columns(2)
+        with col3:
+            target_time = st.time_input("Expected Arrival Time", datetime.time(8, 0))
+        with col4:
+            day_of_week = st.selectbox("Day of Week", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
 
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Distance", f"{lot['distance_km']} km away")
-                c2.metric("Predicted Availability", f"{lot['predicted_avail']}%")
-                c3.metric("Live Free Slots", f"{lot['current_free_slots']} / {lot['total_capacity']}")
-                c4.metric("Rate", f"₱{lot['price']:.2f}")
+        search_button = st.button("Search Nearest Parking", type="primary", use_container_width=True)
 
-                col_btn, col_count = st.columns([1, 4])
-                with col_btn:
-                    if st.button(f"👍 Commend ({lot['commends']})", key=f"commend_{lot['id']}"):
-                        for item in st.session_state.parking_lots_v3:
-                            if item["id"] == lot["id"]:
-                                item["commends"] += 1
-                                save_data(st.session_state.parking_lots_v3) 
-                                st.rerun()
+        if search_button or destination_address:
+            base_lat, base_lon = CITY_COORDINATES[target_city]
+            lots_display = []
+            
+            day_code_map = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6}
+            city_code_map = {"Manila": 0, "Makati": 1, "Quezon City": 2}
+            time_minutes = target_time.hour * 60 + target_time.minute
+
+            for lot in st.session_state.db["lots"]:
+                dist_km = haversine(base_lat, base_lon, lot["lat"], lot["lon"])
+                if model:
+                    features = pd.DataFrame([{'day_of_week': day_code_map[day_of_week], 'time_of_day_minute': time_minutes, 'total_capacity': lot["total_capacity"], 'city_code': city_code_map.get(lot["city"], 0)}])
+                    pred_occ = float(model.predict(features)[0])
+                    pred_occ = max(0.0, min(1.0, pred_occ))
+                    availability_pct = round((1 - pred_occ) * 100, 1)
+                else:
+                    availability_pct = round((lot["current_free_slots"] / lot["total_capacity"]) * 100, 1)
+
+                lots_display.append({**lot, "distance_km": dist_km, "predicted_avail": availability_pct})
+
+            lots_display = sorted(lots_display, key=lambda x: x["distance_km"])
+            st.markdown(f"### 🎯 Results Near: **{destination_address if destination_address else target_city}**")
+
+            for lot in lots_display:
+                with st.container():
+                    st.markdown(f"#### 🏢 {lot['name']}")
+                    st.caption(f"📍 {lot['address']} ({lot['city']}) | **Managed by: {lot.get('owner_name', 'Independent')}**")
+
+                    c1, c2, c3, c4 = st.columns(4)
+                    c1.metric("Distance", f"{lot['distance_km']} km away")
+                    c2.metric("Predicted Availability", f"{lot['predicted_avail']}%")
+                    c3.metric("Live Free Slots", f"{lot['current_free_slots']} / {lot['total_capacity']}")
+                    c4.metric("Rate", f"₱{lot['price']:.2f}")
+
+                    # Driver Actions
+                    col_act1, col_act2 = st.columns(2)
+                    with col_act1:
+                        if st.button(f"🚙 Park Here", key=f"park_{lot['id']}", type="primary"):
+                            user_history = st.session_state.db["history"].get(st.session_state.user_name, [])
+                            user_history.insert(0, {
+                                "lot_id": lot["id"], 
+                                "lot_name": lot["name"],
+                                "date": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
+                            })
+                            st.session_state.db["history"][st.session_state.user_name] = user_history
+                            save_db(st.session_state.db)
+                            st.success("Parking location saved to your Recent History!")
+                    with col_act2:
+                        if st.button(f"👍 Commend ({lot['commends']})", key=f"commend_{lot['id']}"):
+                            for item in st.session_state.db["lots"]:
+                                if item["id"] == lot["id"]:
+                                    item["commends"] += 1
+                            save_db(st.session_state.db)
+                            st.rerun()
+                    st.markdown("---")
+
+    with tab2:
+        st.write("### Your Parking History")
+        user_history = st.session_state.db["history"].get(st.session_state.user_name, [])
+        
+        if not user_history:
+            st.info("You haven't parked anywhere recently. Search and click 'Park Here' to build your history!")
+        else:
+            for record in user_history:
+                st.markdown(f"**🏢 {record['lot_name']}**")
+                st.caption(f"📅 Visited on: {record['date']}")
                 st.markdown("---")
 
 # ==========================================
-# PAGE 2: PARKING OWNER INTERFACE
+# PAGE 3: PARKING OWNER DASHBOARD
 # ==========================================
-elif st.session_state.role == 'owner':
+elif st.session_state.role == 'owner' and st.session_state.user_name is not None:
     col_back, _ = st.columns([1, 5])
     with col_back:
-        if st.button("⬅️ Back to Home", use_container_width=True):
+        if st.button("⬅️ Log Out", use_container_width=True):
             st.session_state.role = None
+            st.session_state.user_name = None
             st.rerun()
 
-    st.subheader("Manage & List Parking Spaces")
+    st.subheader(f"🏢 Owner Dashboard: {st.session_state.user_name}")
     
-    current_owner = st.text_input("Enter your Name or Company to manage your listings:", placeholder="e.g. Bayleaf Hotel")
-    
-    if current_owner:
-        with st.expander(f"➕ Publish a New Parking Spot as '{current_owner}'", expanded=False):
-            # Added clear_on_submit=True to clear the fields automatically
-            with st.form("add_lot_form", clear_on_submit=True):
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    lot_name = st.text_input("Parking Facility Name", placeholder="e.g. Sunshine 100 Basement")
-                    city = st.selectbox("City", ["Manila", "Makati", "Quezon City"])
-                    specific_address = st.text_input("Specific Address", placeholder="e.g. 123 Pioneer St")
-                with col_b:
-                    price = st.number_input("Parking Rate (₱ Flat)", min_value=10.0, value=50.0, step=5.0)
-                    total_capacity = st.number_input("Total Capacity", min_value=1, value=20, step=1)
-                    free_slots = st.number_input("Currently Available", min_value=0, value=10, step=1)
+    with st.expander(f"➕ Publish a New Parking Spot", expanded=False):
+        with st.form("add_lot_form", clear_on_submit=True):
+            col_a, col_b = st.columns(2)
+            with col_a:
+                lot_name = st.text_input("Parking Facility Name", placeholder="e.g. Sunshine 100 Basement")
+                city = st.selectbox("City", ["Manila", "Makati", "Quezon City"])
+                specific_address = st.text_input("Specific Address", placeholder="e.g. 123 Pioneer St")
+            with col_b:
+                price = st.number_input("Parking Rate (₱ Flat)", min_value=10.0, value=50.0, step=5.0)
+                total_capacity = st.number_input("Total Capacity", min_value=1, value=20, step=1)
+                free_slots = st.number_input("Currently Available", min_value=0, value=10, step=1)
 
-                submitted = st.form_submit_button("Publish Parking Spot", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("Publish Parking Spot", type="primary", use_container_width=True)
 
-                if submitted:
-                    if not lot_name or not specific_address:
-                        st.error("Please fill in both the parking facility name and specific address.")
-                    else:
-                        base_lat, base_lon = CITY_COORDINATES[city]
-                        new_lot = {
-                            "id": len(st.session_state.parking_lots_v3) + 1,
-                            "owner_name": current_owner,
-                            "name": lot_name,
-                            "city": city,
-                            "address": specific_address,
-                            "lat": base_lat + np.random.uniform(-0.01, 0.01),
-                            "lon": base_lon + np.random.uniform(-0.01, 0.01),
-                            "price": float(price),
-                            "total_capacity": int(total_capacity),
-                            "current_free_slots": int(free_slots),
-                            "lighting": True,
-                            "cctv": True,
-                            "pwd": False,
-                            "commends": 0,
-                            "reviews": []
-                        }
-                        st.session_state.parking_lots_v3.append(new_lot)
-                        save_data(st.session_state.parking_lots_v3) 
-                        st.success(f"'{lot_name}' has been successfully listed under {current_owner}!")
+            if submitted:
+                if not lot_name or not specific_address:
+                    st.error("Please fill in both the parking facility name and specific address.")
+                else:
+                    base_lat, base_lon = CITY_COORDINATES[city]
+                    new_id = max([L["id"] for L in st.session_state.db["lots"]] + [0]) + 1
+                    new_lot = {
+                        "id": new_id,
+                        "owner_name": st.session_state.user_name,
+                        "name": lot_name,
+                        "city": city,
+                        "address": specific_address,
+                        "lat": base_lat + np.random.uniform(-0.01, 0.01),
+                        "lon": base_lon + np.random.uniform(-0.01, 0.01),
+                        "price": float(price),
+                        "total_capacity": int(total_capacity),
+                        "current_free_slots": int(free_slots),
+                        "lighting": True, "cctv": True, "pwd": False,
+                        "commends": 0, "reviews": []
+                    }
+                    st.session_state.db["lots"].append(new_lot)
+                    save_db(st.session_state.db)
+                    st.success(f"'{lot_name}' has been successfully listed!")
+                    st.rerun()
 
     st.markdown("---")
-    st.subheader("Global Platform Inventory")
-    st.write("All parking spaces currently published on GoSpot, grouped by Owner.")
+    st.subheader("Your Managed Listings")
     
-    inventory_df = pd.DataFrame([
-        {
-            "Owner Name": lot.get("owner_name", "Independent"),
-            "Facility Name": lot["name"],
-            "City": lot["city"],
-            "Address": lot["address"],
-            "Rate": f"₱{lot['price']:.2f}",
-            "Free / Total": f"{lot['current_free_slots']} / {lot['total_capacity']}"
-        }
-        for lot in st.session_state.parking_lots_v3
-    ])
+    # Filter listings to only show ones owned by the logged-in user
+    my_lots = [lot for lot in st.session_state.db["lots"] if lot.get("owner_name") == st.session_state.user_name]
     
-    st.dataframe(inventory_df, use_container_width=True, hide_index=True)
+    if not my_lots:
+        st.info("You haven't published any parking facilities yet. Use the form above to add your first lot!")
+    else:
+        for lot in my_lots:
+            with st.container():
+                st.markdown(f"#### 🏢 {lot['name']}")
+                st.caption(f"📍 {lot['address']} | Capacity: {lot['total_capacity']} | Rate: ₱{lot['price']:.2f}")
+                
+                with st.expander("✏️ Edit or Delete Listing"):
+                    with st.form(f"edit_form_{lot['id']}"):
+                        new_price = st.number_input("Update Rate (₱)", value=float(lot['price']), step=5.0)
+                        new_capacity = st.number_input("Update Total Capacity", value=int(lot['total_capacity']), step=1)
+                        new_free = st.number_input("Update Live Available Slots", value=int(lot['current_free_slots']), step=1)
+                        
+                        update_submit = st.form_submit_button("Save Changes")
+                        if update_submit:
+                            lot['price'] = new_price
+                            lot['total_capacity'] = new_capacity
+                            lot['current_free_slots'] = new_free
+                            save_db(st.session_state.db)
+                            st.success("Listing updated successfully!")
+                            st.rerun()
+                    
+                    # Delete Button (Outside the form)
+                    if st.button(f"🗑️ Delete '{lot['name']}'", key=f"del_{lot['id']}"):
+                        st.session_state.db["lots"] = [L for L in st.session_state.db["lots"] if L["id"] != lot["id"]]
+                        save_db(st.session_state.db)
+                        st.warning("Listing deleted.")
+                        st.rerun()
+            st.write("") # Spacing
