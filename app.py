@@ -102,11 +102,11 @@ col_left, col_center, col_right = st.columns([1, 2, 1])
 
 with col_center:
     try:
-    st.image("logo.png", width=200)
-except FileNotFoundError:
-    st.title("🚗 GoSpot")
+        st.image("logo.png", width=200)
+    except FileNotFoundError:
+        st.title("🚗 GoSpot")
 
-st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ==========================================
