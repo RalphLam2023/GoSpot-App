@@ -237,8 +237,7 @@ elif st.session_state.role == 'driver':
         for lot in lots_display:
             with st.container():
                 st.markdown(f"#### 🏢 {lot['name']}")
-                st.caption(f"📍 {lot['address']} ({lot['city']}) | **Managed by: {lot['owner_name']}**")
-
+                st.caption(f"📍 {lot['address']} ({lot['city']}) | **Managed by: {lot.get('owner_name', 'Independent Owner')}**")
                 c1, c2, c3, c4 = st.columns(4)
                 c1.metric("Distance", f"{lot['distance_km']} km away")
                 c2.metric("Predicted Availability", f"{lot['predicted_avail']}%")
@@ -315,7 +314,7 @@ elif st.session_state.role == 'owner':
     
     inventory_df = pd.DataFrame([
         {
-            "Owner Name": lot["owner_name"],
+            "Owner Name": lot.get("owner_name", "Independent Owner"),
             "Facility Name": lot["name"],
             "City": lot["city"],
             "Address": lot["address"],
