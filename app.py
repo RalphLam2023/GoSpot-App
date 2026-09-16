@@ -102,7 +102,7 @@ col_left, col_center, col_right = st.columns([1, 2, 1])
 
 with col_center:
     try:
-        st.image("logo.png", width=200)
+        st.image("logo.png", width=300)
     except FileNotFoundError:
         st.title("🚗 GoSpot")
 
