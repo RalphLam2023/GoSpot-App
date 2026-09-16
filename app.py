@@ -8,14 +8,61 @@ import math
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="GoSpot | Smart Parking Platform", page_icon="🚗", layout="wide")
 
-# --- CUSTOM CSS FOR BIGGER BUTTONS ---
+# --- CUSTOM CSS: BIGGER BUTTONS & GREEN THEME ---
 st.markdown("""
     <style>
-    /* Target the buttons on the landing page to make them taller and bolder */
-    div[data-testid="column"] button {
-        height: 80px;
-        font-size: 24px !important;
-        font-weight: bold;
+    /* Global Primary Green Theme Colors */
+    :root {
+        --primary-color: #16a34a;
+    }
+
+    /* Target all buttons across the app to make them bigger */
+    div.stButton > button {
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        font-size: 18px !important;
+        padding: 12px 24px !important;
+        transition: all 0.2s ease-in-out !important;
+        border: 1px solid #16a34a !important;
+    }
+
+    /* Primary buttons (Driver / Owner buttons & Main Action buttons) */
+    div.stButton > button[kind="primary"] {
+        background-color: #16a34a !important;
+        color: #ffffff !important;
+        border: none !important;
+        box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3) !important;
+    }
+
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #15803d !important;
+        color: #ffffff !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4) !important;
+    }
+
+    /* Extra-large styling specifically for the Landing Page selection buttons */
+    .landing-btn div.stButton > button {
+        height: 100px !important;
+        font-size: 28px !important;
+        letter-spacing: 0.5px;
+    }
+
+    /* Secondary / standard buttons hover */
+    div.stButton > button[kind="secondary"]:hover {
+        border-color: #16a34a !important;
+        color: #16a34a !important;
+        background-color: #f0fdf4 !important;
+    }
+
+    /* Green accent highlights for titles and headers */
+    h1, h2, h3, h4 {
+        color: #14532d;
+    }
+
+    /* Metric value color */
+    div[data-testid="stMetricValue"] {
+        color: #16a34a !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -108,9 +155,9 @@ if "parking_lots" not in st.session_state:
 col_left, col_center, col_right = st.columns([2, 1, 2])
 with col_center:
     try:
-        st.image("logo.png", use_container_width=True) 
+        st.image("1.png", use_container_width=True) 
     except FileNotFoundError:
-        st.markdown("<h1 style='text-align: center;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center; color: #16a34a;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -125,14 +172,18 @@ if st.session_state.role is None:
     col1, col2 = st.columns(2)
     
     with col1:
+        st.markdown('<div class="landing-btn">', unsafe_allow_html=True)
         if st.button("Driver", use_container_width=True, type="primary"):
             st.session_state.role = 'driver'
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
             
     with col2:
+        st.markdown('<div class="landing-btn">', unsafe_allow_html=True)
         if st.button("Parking Owner", use_container_width=True, type="primary"):
             st.session_state.role = 'owner'
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
 # PAGE 1: DRIVER INTERFACE
