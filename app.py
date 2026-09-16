@@ -28,7 +28,6 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return round(R * c, 2)
 
-# Coordinate dictionary for key Metro Manila areas (fallback generator for custom addresses)
 CITY_COORDINATES = {
     "Manila": (14.5905, 120.9842),
     "Makati": (14.5547, 121.0244),
@@ -36,6 +35,9 @@ CITY_COORDINATES = {
 }
 
 # --- INITIALIZE SESSION STATE DATA ---
+if "role" not in st.session_state:
+    st.session_state.role = None  # None = Landing Page, 'driver' = Driver UI, 'owner' = Owner UI
+
 if "parking_lots" not in st.session_state:
     st.session_state.parking_lots = [
         {
@@ -95,95 +97,46 @@ if "parking_lots" not in st.session_state:
         }
     ]
 
-# --- APP HEADER & ROLE SELECTION ---
-st.image("logo.png", width=400)
+# --- APP HEADER (VISIBLE ON ALL PAGES) ---
+try:
+    st.image("1.png", width=300)
+except FileNotFoundError:
+    st.title("🚗 GoSpot")
+
 st.caption("AI-Powered Parking Availability & Prediction Platform")
-
-role = st.radio(
-    "Select your role to continue:",
-    options=["🚘 I am a Driver", "🏢 I am a Parking Owner / Operator"],
-    horizontal=True
-)
-
 st.markdown("---")
 
 # ==========================================
-# 1. PARKING OWNER / OPERATOR INTERFACE
+# PAGE 0: LANDING PAGE (ROLE SELECTION)
 # ==========================================
-if role == "🏢 I am a Parking Owner / Operator":
-    st.subheader("Manage & List Parking Spaces")
-    st.write("Post your available parking slots to reach drivers before they leave.")
-
-    with st.expander("➕ List a New Parking Spot / Lot", expanded=True):
-        with st.form("add_lot_form"):
-            col_a, col_b = st.columns(2)
-            with col_a:
-                lot_name = st.text_input("Parking Lot / Facility Name", placeholder="e.g. Sunshine 100 Basement Parking")
-                city = st.selectbox("City", ["Manila", "Makati", "Quezon City"])
-                specific_address = st.text_input("Specific Address / Street", placeholder="e.g. 123 Pioneer St, Mandaluyong")
-            with col_b:
-                price = st.number_input("Parking Rate (₱ Flat or Base)", min_value=10.0, max_value=500.0, value=50.0, step=5.0)
-                total_capacity = st.number_input("Total Parking Capacity", min_value=1, max_value=500, value=20, step=1)
-                free_slots = st.number_input("Currently Available Slots", min_value=0, max_value=500, value=10, step=1)
-
-            st.write("**Amenities & Security Features:**")
-            col_c, col_d, col_e = st.columns(3)
-            with col_c:
-                has_light = st.checkbox("Well-lit at night", value=True)
-            with col_d:
-                has_cctv = st.checkbox("Active CCTV Coverage", value=True)
-            with col_e:
-                has_pwd = st.checkbox("PWD Accessible Slots", value=False)
-
-            submitted = st.form_submit_button("Publish Parking Spot", type="primary", use_container_width=True)
-
-            if submitted:
-                if not lot_name or not specific_address:
-                    st.error("Please fill in both the parking facility name and specific address.")
-                else:
-                    # Resolve approximate coordinates around the selected city center
-                    base_lat, base_lon = CITY_COORDINATES[city]
-                    simulated_lat = base_lat + np.random.uniform(-0.01, 0.01)
-                    simulated_lon = base_lon + np.random.uniform(-0.01, 0.01)
-
-                    new_lot = {
-                        "id": len(st.session_state.parking_lots) + 1,
-                        "name": lot_name,
-                        "city": city,
-                        "address": specific_address,
-                        "lat": simulated_lat,
-                        "lon": simulated_lon,
-                        "price": float(price),
-                        "total_capacity": int(total_capacity),
-                        "current_free_slots": int(free_slots),
-                        "lighting": has_light,
-                        "cctv": has_cctv,
-                        "pwd": has_pwd,
-                        "commends": 0,
-                        "reviews": []
-                    }
-                    st.session_state.parking_lots.append(new_lot)
-                    st.success(f"'{lot_name}' has been successfully listed!")
-
-    st.subheader("Your Active Parking Inventory")
-    inventory_df = pd.DataFrame([
-        {
-            "Name": lot["name"],
-            "City": lot["city"],
-            "Address": lot["address"],
-            "Rate": f"₱{lot['price']:.2f}",
-            "Free / Total": f"{lot['current_free_slots']} / {lot['total_capacity']}",
-            "Commends": lot["commends"],
-            "Reviews": len(lot["reviews"])
-        }
-        for lot in st.session_state.parking_lots
-    ])
-    st.dataframe(inventory_df, use_container_width=True)
+if st.session_state.role is None:
+    st.markdown("<h2 style='text-align: center;'>Welcome to GoSpot!</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Please select your role to continue.</p>", unsafe_allow_html=True)
+    
+    st.write("") # Spacing
+    col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+    
+    with col2:
+        if st.button("🚘 I am a Driver", use_container_width=True):
+            st.session_state.role = 'driver'
+            st.rerun()
+            
+    with col3:
+        if st.button("🏢 I am a Parking Owner", use_container_width=True):
+            st.session_state.role = 'owner'
+            st.rerun()
 
 # ==========================================
-# 2. DRIVER INTERFACE
+# PAGE 1: DRIVER INTERFACE
 # ==========================================
-else:
+elif st.session_state.role == 'driver':
+    # Sidebar Navigation
+    with st.sidebar:
+        st.write("**Current Role: Driver**")
+        if st.button("⬅️ Switch Role / Back Home", use_container_width=True):
+            st.session_state.role = None
+            st.rerun()
+
     st.subheader("Find & Compare Nearby Parking Spots")
 
     # Search and Parameter Inputs
@@ -267,7 +220,6 @@ else:
                 col_btn, col_count = st.columns([1, 4])
                 with col_btn:
                     if st.button(f"👍 Commend ({lot['commends']})", key=f"commend_{lot['id']}"):
-                        # Find the lot in session state and increment commendations
                         for item in st.session_state.parking_lots:
                             if item["id"] == lot["id"]:
                                 item["commends"] += 1
@@ -275,14 +227,12 @@ else:
 
                 # Expandable Community Reviews
                 with st.expander(f"💬 Driver Reviews & Notes ({len(lot['reviews'])})"):
-                    # Display existing reviews
                     if lot["reviews"]:
                         for r in lot["reviews"]:
                             st.markdown(f"- **@{r['user']}**: {r['comment']}")
                     else:
                         st.info("No reviews yet. Be the first to leave one!")
 
-                    # Add new review
                     with st.form(key=f"review_form_{lot['id']}"):
                         user_handle = st.text_input("Your Name / Handle", key=f"user_{lot['id']}")
                         user_comment = st.text_area("Write a review or parking tip:", key=f"comment_{lot['id']}")
@@ -299,3 +249,82 @@ else:
                                 st.error("Please provide both your name and a comment.")
 
                 st.markdown("---")
+
+# ==========================================
+# PAGE 2: PARKING OWNER INTERFACE
+# ==========================================
+elif st.session_state.role == 'owner':
+    # Sidebar Navigation
+    with st.sidebar:
+        st.write("**Current Role: Parking Owner**")
+        if st.button("⬅️ Switch Role / Back Home", use_container_width=True):
+            st.session_state.role = None
+            st.rerun()
+
+    st.subheader("Manage & List Parking Spaces")
+    st.write("Post your available parking slots to reach drivers before they leave.")
+
+    with st.expander("➕ List a New Parking Spot / Lot", expanded=True):
+        with st.form("add_lot_form"):
+            col_a, col_b = st.columns(2)
+            with col_a:
+                lot_name = st.text_input("Parking Lot / Facility Name", placeholder="e.g. Sunshine 100 Basement Parking")
+                city = st.selectbox("City", ["Manila", "Makati", "Quezon City"])
+                specific_address = st.text_input("Specific Address / Street", placeholder="e.g. 123 Pioneer St, Mandaluyong")
+            with col_b:
+                price = st.number_input("Parking Rate (₱ Flat or Base)", min_value=10.0, max_value=500.0, value=50.0, step=5.0)
+                total_capacity = st.number_input("Total Parking Capacity", min_value=1, max_value=500, value=20, step=1)
+                free_slots = st.number_input("Currently Available Slots", min_value=0, max_value=500, value=10, step=1)
+
+            st.write("**Amenities & Security Features:**")
+            col_c, col_d, col_e = st.columns(3)
+            with col_c:
+                has_light = st.checkbox("Well-lit at night", value=True)
+            with col_d:
+                has_cctv = st.checkbox("Active CCTV Coverage", value=True)
+            with col_e:
+                has_pwd = st.checkbox("PWD Accessible Slots", value=False)
+
+            submitted = st.form_submit_button("Publish Parking Spot", type="primary", use_container_width=True)
+
+            if submitted:
+                if not lot_name or not specific_address:
+                    st.error("Please fill in both the parking facility name and specific address.")
+                else:
+                    base_lat, base_lon = CITY_COORDINATES[city]
+                    simulated_lat = base_lat + np.random.uniform(-0.01, 0.01)
+                    simulated_lon = base_lon + np.random.uniform(-0.01, 0.01)
+
+                    new_lot = {
+                        "id": len(st.session_state.parking_lots) + 1,
+                        "name": lot_name,
+                        "city": city,
+                        "address": specific_address,
+                        "lat": simulated_lat,
+                        "lon": simulated_lon,
+                        "price": float(price),
+                        "total_capacity": int(total_capacity),
+                        "current_free_slots": int(free_slots),
+                        "lighting": has_light,
+                        "cctv": has_cctv,
+                        "pwd": has_pwd,
+                        "commends": 0,
+                        "reviews": []
+                    }
+                    st.session_state.parking_lots.append(new_lot)
+                    st.success(f"'{lot_name}' has been successfully listed!")
+
+    st.subheader("Your Active Parking Inventory")
+    inventory_df = pd.DataFrame([
+        {
+            "Name": lot["name"],
+            "City": lot["city"],
+            "Address": lot["address"],
+            "Rate": f"₱{lot['price']:.2f}",
+            "Free / Total": f"{lot['current_free_slots']} / {lot['total_capacity']}",
+            "Commends": lot["commends"],
+            "Reviews": len(lot["reviews"])
+        }
+        for lot in st.session_state.parking_lots
+    ])
+    st.dataframe(inventory_df, use_container_width=True)
