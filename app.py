@@ -96,7 +96,7 @@ if "parking_lots" not in st.session_state:
     ]
 
 # --- APP HEADER & ROLE SELECTION ---
-st.title("🚗 GoSpot")
+st.title("1.png", width=400)
 st.caption("AI-Powered Parking Availability & Prediction Platform")
 
 role = st.radio(
