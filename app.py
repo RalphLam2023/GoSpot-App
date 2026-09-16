@@ -98,15 +98,16 @@ if "parking_lots" not in st.session_state:
     ]
 
 # --- APP HEADER (VISIBLE ON ALL PAGES) ---
-col_left, col_center, col_right = st.columns([1, 2, 1])
+col_left, col_center, col_right = st.columns([2, 1, 2])
 
 with col_center:
     try:
-        st.image("logo.png", width=300)
+        st.image("1.png", use_container_width=True) 
     except FileNotFoundError:
-        st.title("🚗 GoSpot")
+        st.markdown("<h1 style='text-align: center;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
 
-    st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
+# Moved OUTSIDE the columns to perfectly center across the entire screen width
+st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
 
 # ==========================================
 # PAGE 0: LANDING PAGE (ROLE SELECTION)
