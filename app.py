@@ -102,7 +102,7 @@ col_left, col_center, col_right = st.columns([2, 1, 2])
 
 with col_center:
     try:
-        st.image("1.png", use_container_width=True) 
+        st.image("logo.png", use_container_width=True) 
     except FileNotFoundError:
         st.markdown("<h1 style='text-align: center;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
 
