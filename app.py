@@ -83,7 +83,6 @@ def load_data():
         with open(DB_FILE, "r") as f:
             return json.load(f)
     else:
-        # Default starting data
         default_data = [
             {
                 "id": 1,
@@ -127,7 +126,6 @@ def save_data(data):
     with open(DB_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-# Initialize Session State
 if "role" not in st.session_state:
     st.session_state.role = None  
 
@@ -139,7 +137,7 @@ if "parking_lots_v3" not in st.session_state:
 col_left, col_center, col_right = st.columns([2, 1, 2])
 with col_center:
     try:
-        st.image("logo.png", use_container_width=True) 
+        st.image("1.png", use_container_width=True) 
     except FileNotFoundError:
         st.markdown("<h1 style='text-align: center; color: #16a34a;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
@@ -158,7 +156,6 @@ if st.session_state.role is None:
         st.markdown('<div class="landing-btn">', unsafe_allow_html=True)
         if st.button("Driver", use_container_width=True, type="primary"):
             st.session_state.role = 'driver'
-            # Refresh data from file in case another user added a lot
             st.session_state.parking_lots_v3 = load_data()
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -237,7 +234,7 @@ elif st.session_state.role == 'driver':
                         for item in st.session_state.parking_lots_v3:
                             if item["id"] == lot["id"]:
                                 item["commends"] += 1
-                                save_data(st.session_state.parking_lots_v3) # Save to JSON
+                                save_data(st.session_state.parking_lots_v3) 
                                 st.rerun()
                 st.markdown("---")
 
@@ -257,7 +254,8 @@ elif st.session_state.role == 'owner':
     
     if current_owner:
         with st.expander(f"➕ Publish a New Parking Spot as '{current_owner}'", expanded=False):
-            with st.form("add_lot_form"):
+            # Added clear_on_submit=True to clear the fields automatically
+            with st.form("add_lot_form", clear_on_submit=True):
                 col_a, col_b = st.columns(2)
                 with col_a:
                     lot_name = st.text_input("Parking Facility Name", placeholder="e.g. Sunshine 100 Basement")
@@ -293,9 +291,8 @@ elif st.session_state.role == 'owner':
                             "reviews": []
                         }
                         st.session_state.parking_lots_v3.append(new_lot)
-                        save_data(st.session_state.parking_lots_v3) # Save to JSON
+                        save_data(st.session_state.parking_lots_v3) 
                         st.success(f"'{lot_name}' has been successfully listed under {current_owner}!")
-                        st.rerun()
 
     st.markdown("---")
     st.subheader("Global Platform Inventory")
