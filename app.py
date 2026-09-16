@@ -4,6 +4,8 @@ import numpy as np
 import joblib
 import datetime
 import math
+import json
+import os
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="GoSpot | Smart Parking Platform", page_icon="🚗", layout="wide")
@@ -11,12 +13,7 @@ st.set_page_config(page_title="GoSpot | Smart Parking Platform", page_icon="🚗
 # --- CUSTOM CSS: BIGGER BUTTONS & GREEN THEME ---
 st.markdown("""
     <style>
-    /* Global Primary Green Theme Colors */
-    :root {
-        --primary-color: #16a34a;
-    }
-
-    /* Target all buttons across the app to make them bigger */
+    :root { --primary-color: #16a34a; }
     div.stButton > button {
         border-radius: 12px !important;
         font-weight: 700 !important;
@@ -25,45 +22,30 @@ st.markdown("""
         transition: all 0.2s ease-in-out !important;
         border: 1px solid #16a34a !important;
     }
-
-    /* Primary buttons (Driver / Owner buttons & Main Action buttons) */
     div.stButton > button[kind="primary"] {
         background-color: #16a34a !important;
         color: #ffffff !important;
         border: none !important;
         box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3) !important;
     }
-
     div.stButton > button[kind="primary"]:hover {
         background-color: #15803d !important;
         color: #ffffff !important;
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4) !important;
     }
-
-    /* Extra-large styling specifically for the Landing Page selection buttons */
     .landing-btn div.stButton > button {
         height: 100px !important;
         font-size: 28px !important;
         letter-spacing: 0.5px;
     }
-
-    /* Secondary / standard buttons hover */
     div.stButton > button[kind="secondary"]:hover {
         border-color: #16a34a !important;
         color: #16a34a !important;
         background-color: #f0fdf4 !important;
     }
-
-    /* Green accent highlights for titles and headers */
-    h1, h2, h3, h4 {
-        color: #14532d;
-    }
-
-    /* Metric value color */
-    div[data-testid="stMetricValue"] {
-        color: #16a34a !important;
-    }
+    h1, h2, h3, h4 { color: #14532d; }
+    div[data-testid="stMetricValue"] { color: #16a34a !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -77,9 +59,9 @@ def load_model():
 
 model = load_model()
 
-# --- DISTANCE UTILITY (HAVERSINE FORMULA) ---
+# --- DISTANCE UTILITY (HAVERSINE) ---
 def haversine(lat1, lon1, lat2, lon2):
-    R = 6371.0 # Earth radius in km
+    R = 6371.0 
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
@@ -92,66 +74,68 @@ CITY_COORDINATES = {
     "Quezon City": (14.6488, 121.0509)
 }
 
-# --- INITIALIZE SESSION STATE DATA ---
+# --- DATABASE MANAGEMENT (JSON) ---
+DB_FILE = "parking_data.json"
+
+def load_data():
+    """Loads parking data from JSON file or creates it if it doesn't exist."""
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    else:
+        # Default starting data
+        default_data = [
+            {
+                "id": 1,
+                "owner_name": "Bayleaf Hotel",
+                "name": "Bayleaf Hotel Parking",
+                "city": "Manila",
+                "address": "Muralla St corner Victoria St, Intramuros, Manila",
+                "lat": 14.5898, "lon": 120.9754,
+                "price": 150.0, "total_capacity": 80, "current_free_slots": 25,
+                "lighting": True, "cctv": True, "pwd": True, "commends": 42,
+                "reviews": [{"user": "StudentCommuter", "comment": "Very secure and safe hotel basement."}]
+            },
+            {
+                "id": 2,
+                "owner_name": "Ayala Property Mgmt",
+                "name": "Legazpi Village Commercial Parking",
+                "city": "Makati",
+                "address": "Salcedo St, Legazpi Village, Makati",
+                "lat": 14.5532, "lon": 121.0185,
+                "price": 80.0, "total_capacity": 60, "current_free_slots": 22,
+                "lighting": True, "cctv": True, "pwd": True, "commends": 34,
+                "reviews": [{"user": "AnthonyUy", "comment": "Spacious slots and reliable security guards."}]
+            },
+            {
+                "id": 3,
+                "owner_name": "QC LGU Admin",
+                "name": "Timog Avenue Secure Lot",
+                "city": "Quezon City",
+                "address": "Timog Ave cor. Tomas Morato, Quezon City",
+                "lat": 14.6360, "lon": 121.0345,
+                "price": 60.0, "total_capacity": 30, "current_free_slots": 5,
+                "lighting": True, "cctv": True, "pwd": False, "commends": 9,
+                "reviews": [{"user": "QC_Driver", "comment": "Tight slots, but convenient for restaurants nearby."}]
+            }
+        ]
+        save_data(default_data)
+        return default_data
+
+def save_data(data):
+    """Saves the parking list to the JSON file."""
+    with open(DB_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+# Initialize Session State
 if "role" not in st.session_state:
     st.session_state.role = None  
 
-if "parking_lots" not in st.session_state:
-    st.session_state.parking_lots = [
-        {
-            "id": 1,
-            "owner_name": "Bayleaf Hotel",
-            "name": "Bayleaf Hotel Parking",
-            "city": "Manila",
-            "address": "Muralla St corner Victoria St, Intramuros, Manila",
-            "lat": 14.5898,
-            "lon": 120.9754,
-            "price": 150.0,
-            "total_capacity": 80,
-            "current_free_slots": 25,
-            "lighting": True,
-            "cctv": True,
-            "pwd": True,
-            "commends": 42,
-            "reviews": [{"user": "StudentCommuter", "comment": "Very secure and safe hotel basement, though pricier than street parking."}]
-        },
-        {
-            "id": 2,
-            "owner_name": "Ayala Property Mgmt",
-            "name": "Legazpi Village Commercial Parking",
-            "city": "Makati",
-            "address": "Salcedo St, Legazpi Village, Makati",
-            "lat": 14.5532,
-            "lon": 121.0185,
-            "price": 80.0,
-            "total_capacity": 60,
-            "current_free_slots": 22,
-            "lighting": True,
-            "cctv": True,
-            "pwd": True,
-            "commends": 34,
-            "reviews": [{"user": "AnthonyUy", "comment": "Spacious slots and reliable security guards."}]
-        },
-        {
-            "id": 3,
-            "owner_name": "QC LGU Admin",
-            "name": "Timog Avenue Secure Lot",
-            "city": "Quezon City",
-            "address": "Timog Ave cor. Tomas Morato, Quezon City",
-            "lat": 14.6360,
-            "lon": 121.0345,
-            "price": 60.0,
-            "total_capacity": 30,
-            "current_free_slots": 5,
-            "lighting": True,
-            "cctv": True,
-            "pwd": False,
-            "commends": 9,
-            "reviews": [{"user": "QC_Driver", "comment": "Tight slots, but convenient for restaurants nearby."}]
-        }
-    ]
+if "parking_lots_v3" not in st.session_state:
+    st.session_state.parking_lots_v3 = load_data()
 
-# --- APP HEADER (VISIBLE ON ALL PAGES) ---
+
+# --- APP HEADER ---
 col_left, col_center, col_right = st.columns([2, 1, 2])
 with col_center:
     try:
@@ -170,11 +154,12 @@ if st.session_state.role is None:
     st.write("") 
     
     col1, col2 = st.columns(2)
-    
     with col1:
         st.markdown('<div class="landing-btn">', unsafe_allow_html=True)
         if st.button("Driver", use_container_width=True, type="primary"):
             st.session_state.role = 'driver'
+            # Refresh data from file in case another user added a lot
+            st.session_state.parking_lots_v3 = load_data()
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
             
@@ -182,6 +167,7 @@ if st.session_state.role is None:
         st.markdown('<div class="landing-btn">', unsafe_allow_html=True)
         if st.button("Parking Owner", use_container_width=True, type="primary"):
             st.session_state.role = 'owner'
+            st.session_state.parking_lots_v3 = load_data()
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -219,7 +205,7 @@ elif st.session_state.role == 'driver':
         day_code_map = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6}
         time_minutes = target_time.hour * 60 + target_time.minute
 
-        for lot in st.session_state.parking_lots:
+        for lot in st.session_state.parking_lots_v3:
             dist_km = haversine(driver_lat, driver_lon, lot["lat"], lot["lon"])
             if model:
                 features = pd.DataFrame([{'day_of_week': day_code_map[day_of_week], 'time_of_day_minute': time_minutes, 'total_capacity': lot["total_capacity"], 'city_code': city_code_map.get(lot["city"], 0)}])
@@ -237,7 +223,8 @@ elif st.session_state.role == 'driver':
         for lot in lots_display:
             with st.container():
                 st.markdown(f"#### 🏢 {lot['name']}")
-                st.caption(f"📍 {lot['address']} ({lot['city']}) | **Managed by: {lot.get('owner_name', 'Independent Owner')}**")
+                st.caption(f"📍 {lot['address']} ({lot['city']}) | **Managed by: {lot.get('owner_name', 'Independent')}**")
+
                 c1, c2, c3, c4 = st.columns(4)
                 c1.metric("Distance", f"{lot['distance_km']} km away")
                 c2.metric("Predicted Availability", f"{lot['predicted_avail']}%")
@@ -247,9 +234,10 @@ elif st.session_state.role == 'driver':
                 col_btn, col_count = st.columns([1, 4])
                 with col_btn:
                     if st.button(f"👍 Commend ({lot['commends']})", key=f"commend_{lot['id']}"):
-                        for item in st.session_state.parking_lots:
+                        for item in st.session_state.parking_lots_v3:
                             if item["id"] == lot["id"]:
                                 item["commends"] += 1
+                                save_data(st.session_state.parking_lots_v3) # Save to JSON
                                 st.rerun()
                 st.markdown("---")
 
@@ -288,7 +276,7 @@ elif st.session_state.role == 'owner':
                     else:
                         base_lat, base_lon = CITY_COORDINATES[city]
                         new_lot = {
-                            "id": len(st.session_state.parking_lots) + 1,
+                            "id": len(st.session_state.parking_lots_v3) + 1,
                             "owner_name": current_owner,
                             "name": lot_name,
                             "city": city,
@@ -304,7 +292,8 @@ elif st.session_state.role == 'owner':
                             "commends": 0,
                             "reviews": []
                         }
-                        st.session_state.parking_lots.append(new_lot)
+                        st.session_state.parking_lots_v3.append(new_lot)
+                        save_data(st.session_state.parking_lots_v3) # Save to JSON
                         st.success(f"'{lot_name}' has been successfully listed under {current_owner}!")
                         st.rerun()
 
@@ -314,14 +303,14 @@ elif st.session_state.role == 'owner':
     
     inventory_df = pd.DataFrame([
         {
-            "Owner Name": lot.get("owner_name", "Independent Owner"),
+            "Owner Name": lot.get("owner_name", "Independent"),
             "Facility Name": lot["name"],
             "City": lot["city"],
             "Address": lot["address"],
             "Rate": f"₱{lot['price']:.2f}",
             "Free / Total": f"{lot['current_free_slots']} / {lot['total_capacity']}"
         }
-        for lot in st.session_state.parking_lots
+        for lot in st.session_state.parking_lots_v3
     ])
     
     st.dataframe(inventory_df, use_container_width=True, hide_index=True)
