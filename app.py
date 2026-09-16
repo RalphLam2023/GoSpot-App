@@ -99,7 +99,7 @@ if "parking_lots" not in st.session_state:
 
 # --- APP HEADER (VISIBLE ON ALL PAGES) ---
 try:
-    st.image("1.png", width=300)
+    st.image("logo.png", width=300)
 except FileNotFoundError:
     st.title("🚗 GoSpot")
 
