@@ -127,7 +127,7 @@ if "db" not in st.session_state:
 col_left, col_center, col_right = st.columns([2, 1, 2])
 with col_center:
     try:
-        st.image("1.png", use_container_width=True) 
+        st.image("logo.png", use_container_width=True) 
     except FileNotFoundError:
         st.markdown("<h1 style='text-align: center; color: #16a34a;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
