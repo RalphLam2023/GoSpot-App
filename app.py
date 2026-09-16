@@ -98,12 +98,15 @@ if "parking_lots" not in st.session_state:
     ]
 
 # --- APP HEADER (VISIBLE ON ALL PAGES) ---
-try:
-    st.image("logo.png", width=300)
+col_left, col_center, col_right = st.columns([1, 2, 1])
+
+with col_center:
+    try:
+    st.image("logo.png", width=200)
 except FileNotFoundError:
     st.title("🚗 GoSpot")
 
-st.caption("AI-Powered Parking Availability & Prediction Platform")
+st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ==========================================
@@ -130,10 +133,10 @@ if st.session_state.role is None:
 # PAGE 1: DRIVER INTERFACE
 # ==========================================
 elif st.session_state.role == 'driver':
-    # Sidebar Navigation
-    with st.sidebar:
-        st.write("**Current Role: Driver**")
-        if st.button("⬅️ Switch Role / Back Home", use_container_width=True):
+# Back Button
+    col_back, _ = st.columns([1, 5])
+    with col_back:
+        if st.button("⬅️ Back to Home", use_container_width=True):
             st.session_state.role = None
             st.rerun()
 
@@ -254,10 +257,10 @@ elif st.session_state.role == 'driver':
 # PAGE 2: PARKING OWNER INTERFACE
 # ==========================================
 elif st.session_state.role == 'owner':
-    # Sidebar Navigation
-    with st.sidebar:
-        st.write("**Current Role: Parking Owner**")
-        if st.button("⬅️ Switch Role / Back Home", use_container_width=True):
+    # Back Button
+    col_back, _ = st.columns([1, 5])
+    with col_back:
+        if st.button("⬅️ Back to Home", use_container_width=True):
             st.session_state.role = None
             st.rerun()
 
