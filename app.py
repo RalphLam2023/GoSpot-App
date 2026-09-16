@@ -107,7 +107,6 @@ with col_center:
         st.title("🚗 GoSpot")
 
     st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
-st.markdown("---")
 
 # ==========================================
 # PAGE 0: LANDING PAGE (ROLE SELECTION)
