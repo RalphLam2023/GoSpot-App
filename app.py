@@ -31,17 +31,27 @@ st.markdown(f"""
     <style>
     :root {{ --primary-color: #16a34a; }}
     
+    /* Global readable text */
     .stApp p, .stApp span, .stApp label, .stApp h1, .stApp h2, .stApp h3, .stApp h4 {{
         color: #1e293b !important;
     }}
     
     h1, h2, h3, h4 {{ color: #16a34a !important; font-weight: bold !important; }}
 
+    /* GUARANTEED VISIBILITY FOR INPUTS: White box, dark text */
+    div[data-baseweb="input"] > div, 
+    div[data-baseweb="select"] > div,
+    input[type="time"] {{
+        background-color: #ffffff !important;
+        border: 1px solid #94a3b8 !important;
+        border-radius: 8px !important;
+    }}
+    
     div[data-baseweb="input"] input, 
-    div[data-baseweb="select"] div,
-    input {{
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
+    div[data-baseweb="select"] *,
+    input[type="time"] {{
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
     }}
     
     div[data-testid="stMetricValue"] > div {{
@@ -65,28 +75,38 @@ st.markdown(f"""
         margin-bottom: 2rem;
     }}
 
+    /* FIX BUTTONS AND LINK BUTTONS */
     div.stButton > button, a[data-testid="stLinkButton"] {{
         border-radius: 12px !important;
         font-weight: 700 !important;
         font-size: 18px !important;
         transition: all 0.2s ease-in-out !important;
-        border: 2px solid #16a34a !important;
     }}
-    div.stButton > button[kind="secondary"], a[data-testid="stLinkButton"] {{
+    
+    /* Make the Show Route link button and primary buttons Green with White Text */
+    a[data-testid="stLinkButton"], div.stButton > button[kind="primary"] {{
+        background-color: #16a34a !important;
+        border: none !important;
+        box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3) !important;
+        text-decoration: none !important;
+    }}
+    
+    a[data-testid="stLinkButton"] *, div.stButton > button[kind="primary"] * {{
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }}
+
+    a[data-testid="stLinkButton"]:hover, div.stButton > button[kind="primary"]:hover {{
+        background-color: #15803d !important;
+        transform: translateY(-2px);
+    }}
+    
+    /* Standard outline buttons */
+    div.stButton > button[kind="secondary"] {{
+        border: 2px solid #16a34a !important;
         color: #16a34a !important;
         background-color: #ffffff !important;
         -webkit-text-fill-color: #16a34a !important;
-    }}
-    div.stButton > button[kind="primary"], div.stButton > button[kind="primary"] * {{
-        background-color: #16a34a !important;
-        color: #ffffff !important;
-        border: none !important;
-        box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3) !important;
-        -webkit-text-fill-color: #ffffff !important;
-    }}
-    div.stButton > button[kind="primary"]:hover {{
-        background-color: #15803d !important;
-        transform: translateY(-2px);
     }}
     
     .landing-btn div.stButton > button {{
@@ -254,7 +274,7 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
 
         st.info("The map updates automatically based on your typed address.")
         
-        # FAST STATIC HTML MAP (NO DRAGGING/NO LAG)
+        # FAST STATIC HTML MAP
         m = folium.Map(location=[base_lat, base_lon], zoom_start=15, control_scale=False, zoom_control=False, scrollWheelZoom=False, dragging=False)
         
         if has_custom_pin:
