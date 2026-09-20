@@ -31,14 +31,23 @@ st.markdown(f"""
     <style>
     :root {{ --primary-color: #16a34a; }}
     
+    /* Force dark text for readability on light backgrounds (overrides Dark Mode) */
     .stApp p, .stApp div, .stApp span, .stApp label {{
         color: #1e293b !important;
     }}
     
+    /* Ensure metric values and specific components retain primary color */
     div[data-testid="stMetricValue"] > div {{
         color: #16a34a !important;
     }}
 
+    /* Target the Expected Arrival Time specifically to make it white */
+    [data-testid="stTimeInput"] label p,
+    [data-testid="stTimeInput"] input {{
+        color: #ffffff !important;
+    }}
+
+    /* Real Local Map Background with a frosted glass overlay */
     .stApp {{
         background-image: linear-gradient(rgba(248, 250, 252, 0.85), rgba(248, 250, 252, 0.95)), 
                           url("{map_bg}");
@@ -47,6 +56,7 @@ st.markdown(f"""
         background-attachment: fixed;
     }}
 
+    /* Make the main content area stand out against the map background */
     [data-testid="stAppViewBlockContainer"] {{
         background-color: rgba(255, 255, 255, 0.95);
         border-radius: 20px;
@@ -56,6 +66,7 @@ st.markdown(f"""
         margin-bottom: 2rem;
     }}
 
+    /* Button Styling */
     div.stButton > button {{
         border-radius: 12px !important;
         font-weight: 700 !important;
@@ -84,6 +95,7 @@ st.markdown(f"""
         letter-spacing: 0.5px;
     }}
     
+    /* Headers Green */
     h1, h2, h3, h4 {{ color: #16a34a !important; font-weight: bold; }}
     </style>
 """, unsafe_allow_html=True)
@@ -293,7 +305,7 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
         st.info("The map syncs with your typed address automatically. You can also click directly on the map to drop a pin.")
         
         # INTERACTIVE MAP WIDGET
-        m = folium.Map(location=[base_lat, base_lon], zoom_start=15) # Zoomed in closer
+        m = folium.Map(location=[base_lat, base_lon], zoom_start=15)
         
         # Add target marker if user typed a valid address
         if has_custom_pin:
