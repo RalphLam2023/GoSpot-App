@@ -7,6 +7,8 @@ import math
 import json
 import os
 import base64
+import folium
+from streamlit_folium import st_folium
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="GoSpot | Smart Parking Platform", page_icon="🚗", layout="wide")
@@ -14,22 +16,33 @@ st.set_page_config(page_title="GoSpot | Smart Parking Platform", page_icon="🚗
 # --- IMAGE TO BASE64 HELPER (FOR LOCAL BACKGROUND) ---
 def get_base64_image(image_path):
     try:
-        with open(image_path, "rb") as img_file:
-            return f"data:image/png;base64,{base64.b64encode(img_file.read()).decode()}"
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as img_file:
+                return f"data:image/png;base64,{base64.b64encode(img_file.read()).decode()}"
     except Exception:
-        # Fallback to a plain color if map.png is missing
-        return ""
+        pass
+    return ""
 
-map_bg = get_base64_image("map.jpg")
+map_bg = get_base64_image("map.png")
 
-# --- CUSTOM CSS: BIGGER BUTTONS, GREEN THEME & FROSTED MAP BACKGROUND ---
+# --- CUSTOM CSS: BIGGER BUTTONS, GREEN THEME, TEXT COLOR FIX ---
 st.markdown(f"""
     <style>
     :root {{ --primary-color: #16a34a; }}
     
+    /* Force dark text for readability on light backgrounds (overrides Dark Mode) */
+    .stApp p, .stApp div, .stApp span, .stApp label {{
+        color: #1e293b !important;
+    }}
+    
+    /* Ensure metric values and specific components retain primary color */
+    div[data-testid="stMetricValue"] > div {{
+        color: #16a34a !important;
+    }}
+
     /* Real Local Map Background with a frosted glass overlay */
     .stApp {{
-        background-image: linear-gradient(rgba(248, 250, 252, 0.80), rgba(248, 250, 252, 0.90)), 
+        background-image: linear-gradient(rgba(248, 250, 252, 0.85), rgba(248, 250, 252, 0.95)), 
                           url("{map_bg}");
         background-size: cover;
         background-position: center;
@@ -38,23 +51,26 @@ st.markdown(f"""
 
     /* Make the main content area stand out against the map background */
     [data-testid="stAppViewBlockContainer"] {{
-        background-color: rgba(255, 255, 255, 0.90);
+        background-color: rgba(255, 255, 255, 0.95);
         border-radius: 20px;
         padding: 2rem;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         margin-top: 1rem;
         margin-bottom: 2rem;
     }}
 
+    /* Button Styling */
     div.stButton > button {{
         border-radius: 12px !important;
         font-weight: 700 !important;
         font-size: 18px !important;
         padding: 12px 24px !important;
         transition: all 0.2s ease-in-out !important;
-        border: 1px solid #16a34a !important;
+        border: 2px solid #16a34a !important;
+        color: #16a34a !important;
+        background-color: #ffffff !important;
     }}
-    div.stButton > button[kind="primary"] {{
+    div.stButton > button[kind="primary"], div.stButton > button[kind="primary"] * {{
         background-color: #16a34a !important;
         color: #ffffff !important;
         border: none !important;
@@ -62,17 +78,18 @@ st.markdown(f"""
     }}
     div.stButton > button[kind="primary"]:hover {{
         background-color: #15803d !important;
-        color: #ffffff !important;
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4) !important;
     }}
+    
     .landing-btn div.stButton > button {{
         height: 100px !important;
         font-size: 28px !important;
         letter-spacing: 0.5px;
     }}
-    h1, h2, h3, h4 {{ color: #14532d; }}
-    div[data-testid="stMetricValue"] {{ color: #16a34a !important; }}
+    
+    /* Headers Green */
+    h1, h2, h3, h4 {{ color: #16a34a !important; font-weight: bold; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -154,17 +171,21 @@ if "db" not in st.session_state:
 col_left, col_center, col_right = st.columns([2, 1, 2])
 with col_center:
     try:
-        st.image("logo.png", use_container_width=True) 
-    except FileNotFoundError:
+        if os.path.exists("logo.png"):
+            st.image("logo.png", use_container_width=True) 
+        else:
+            st.markdown("<h1 style='text-align: center; color: #16a34a;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
+    except Exception:
         st.markdown("<h1 style='text-align: center; color: #16a34a;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #64748b; font-weight: bold;'>AI-Powered Parking Availability Platform</p>", unsafe_allow_html=True)
+        
+st.markdown("<p style='text-align: center; font-weight: bold;'>AI-Powered Parking Availability Platform</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ==========================================
 # PAGE 0: LANDING PAGE
 # ==========================================
 if st.session_state.role is None:
-    st.markdown("<h2 style='text-align: center; background: white; padding: 10px; border-radius: 10px; display: inline-block; margin: 0 auto;'>I am a:</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #16a34a; background: white; padding: 10px 20px; border-radius: 10px; display: inline-block; margin: 0 auto; border: 2px solid #16a34a;'>I am a:</h2>", unsafe_allow_html=True)
     st.write("") 
     
     col1, col2 = st.columns(2)
@@ -194,7 +215,7 @@ elif st.session_state.role is not None and st.session_state.user_name is None:
             st.session_state.role = None
             st.rerun()
 
-    st.markdown(f"<h3 style='text-align: center;'>{st.session_state.role.capitalize()} Login</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center; color: #16a34a;'>{st.session_state.role.capitalize()} Login</h3>", unsafe_allow_html=True)
     
     col_log1, col_log2, col_log3 = st.columns([1, 2, 1])
     with col_log2:
@@ -224,17 +245,31 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
     
     with tab1:
         st.write("### 1. Set Your Destination")
+        st.info("Click anywhere on the map to drop a pin, OR type your location below.")
         
-        try:
-            st.image("map.png", caption="Reference Map", use_container_width=True)
-        except FileNotFoundError:
-            pass # Fails silently if map.png isn't available to display in-body
+        # INTERACTIVE MAP WIDGET
+        m = folium.Map(location=[14.6091, 121.0223], zoom_start=11)
+        for lot in st.session_state.db["lots"]:
+            folium.Marker(
+                [lot["lat"], lot["lon"]], 
+                popup=f"{lot['name']} - ₱{lot['price']}",
+                tooltip="🅿️ " + lot["name"],
+                icon=folium.Icon(color="green", icon="info-sign")
+            ).add_to(m)
+
+        map_data = st_folium(m, height=350, use_container_width=True)
+        
+        pinned_lat, pinned_lon = None, None
+        if map_data and map_data.get("last_clicked"):
+            pinned_lat = map_data["last_clicked"]["lat"]
+            pinned_lon = map_data["last_clicked"]["lng"]
+            st.success(f"📍 Map Pin Dropped at: {pinned_lat:.4f}, {pinned_lon:.4f}")
 
         col1, col2 = st.columns([2, 1])
         with col1:
-            destination_address = st.text_input("📍 Enter destination address manually:", placeholder="e.g. Intramuros Manila")
+            destination_address = st.text_input("Or enter destination address manually:", placeholder="e.g. Intramuros Manila")
         with col2:
-            target_city = st.selectbox("Destination City:", ["Manila", "Makati", "Quezon City"])
+            target_city = st.selectbox("Fallback City:", ["Manila", "Makati", "Quezon City"])
 
         st.write("### 2. Set Arrival Details")
         col3, col4 = st.columns(2)
@@ -245,8 +280,11 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
 
         search_button = st.button("Search Nearest Parking", type="primary", use_container_width=True)
 
-        if search_button or destination_address:
-            base_lat, base_lon = CITY_COORDINATES[target_city]
+        if search_button or destination_address or pinned_lat:
+            if pinned_lat and pinned_lon:
+                base_lat, base_lon = pinned_lat, pinned_lon
+            else:
+                base_lat, base_lon = CITY_COORDINATES[target_city]
             
             lots_display = []
             day_code_map = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6}
@@ -267,7 +305,7 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
 
             lots_display = sorted(lots_display, key=lambda x: x["distance_km"])
             
-            location_label = destination_address if destination_address else target_city
+            location_label = "Pinned Map Location" if pinned_lat else (destination_address if destination_address else target_city)
             st.markdown(f"### 🎯 Results Near: **{location_label}**")
 
             for lot in lots_display:
