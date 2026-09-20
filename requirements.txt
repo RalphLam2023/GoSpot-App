@@ -3,3 +3,5 @@ pandas
 xgboost
 scikit-learn
 joblib
+folium
+streamlit-folium
