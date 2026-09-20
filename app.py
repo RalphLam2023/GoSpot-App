@@ -31,19 +31,26 @@ st.markdown(f"""
     <style>
     :root {{ --primary-color: #16a34a; }}
     
-    /* Force dark text for readability on light backgrounds (overrides Dark Mode) */
-    .stApp p, .stApp div, .stApp span, .stApp label {{
+    /* Force dark text for readability on light backgrounds */
+    .stApp p, .stApp span, .stApp label, .stApp h1, .stApp h2, .stApp h3, .stApp h4 {{
         color: #1e293b !important;
     }}
     
-    /* Ensure metric values and specific components retain primary color */
+    /* Headers Green Override */
+    h1, h2, h3, h4 {{ color: #16a34a !important; font-weight: bold !important; }}
+
+    /* FIX: Force white text specifically inside input boxes and dropdowns */
+    div[data-baseweb="input"] input, 
+    div[data-baseweb="select"] div,
+    input {{
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }}
+    
+    /* Ensure metric values retain primary color */
     div[data-testid="stMetricValue"] > div {{
         color: #16a34a !important;
-    }}
-
-    /* Target ONLY the input text inside the Time Input to make it white */
-    [data-testid="stTimeInput"] input {{
-        color: #ffffff !important;
+        -webkit-text-fill-color: #16a34a !important;
     }}
 
     /* Real Local Map Background with a frosted glass overlay */
@@ -75,12 +82,14 @@ st.markdown(f"""
         border: 2px solid #16a34a !important;
         color: #16a34a !important;
         background-color: #ffffff !important;
+        -webkit-text-fill-color: #16a34a !important;
     }}
     div.stButton > button[kind="primary"], div.stButton > button[kind="primary"] * {{
         background-color: #16a34a !important;
         color: #ffffff !important;
         border: none !important;
         box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3) !important;
+        -webkit-text-fill-color: #ffffff !important;
     }}
     div.stButton > button[kind="primary"]:hover {{
         background-color: #15803d !important;
@@ -93,9 +102,6 @@ st.markdown(f"""
         font-size: 28px !important;
         letter-spacing: 0.5px;
     }}
-    
-    /* Headers Green */
-    h1, h2, h3, h4 {{ color: #16a34a !important; font-weight: bold; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -213,9 +219,9 @@ with col_center:
         if os.path.exists("logo.png"):
             st.image("logo.png", use_container_width=True) 
         else:
-            st.markdown("<h1 style='text-align: center; color: #16a34a;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align: center;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
     except Exception:
-        st.markdown("<h1 style='text-align: center; color: #16a34a;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
         
 st.markdown("<p style='text-align: center; font-weight: bold;'>AI-Powered Parking Availability Platform</p>", unsafe_allow_html=True)
 st.markdown("---")
@@ -224,7 +230,7 @@ st.markdown("---")
 # PAGE 0: LANDING PAGE
 # ==========================================
 if st.session_state.role is None:
-    st.markdown("<h2 style='text-align: center; color: #16a34a; background: white; padding: 10px 20px; border-radius: 10px; display: inline-block; margin: 0 auto; border: 2px solid #16a34a;'>I am a:</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; background: white; padding: 10px 20px; border-radius: 10px; display: inline-block; margin: 0 auto; border: 2px solid #16a34a;'>I am a:</h2>", unsafe_allow_html=True)
     st.write("") 
     
     col1, col2 = st.columns(2)
@@ -254,7 +260,7 @@ elif st.session_state.role is not None and st.session_state.user_name is None:
             st.session_state.role = None
             st.rerun()
 
-    st.markdown(f"<h3 style='text-align: center; color: #16a34a;'>{st.session_state.role.capitalize()} Login</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center;'>{st.session_state.role.capitalize()} Login</h3>", unsafe_allow_html=True)
     
     col_log1, col_log2, col_log3 = st.columns([1, 2, 1])
     with col_log2:
