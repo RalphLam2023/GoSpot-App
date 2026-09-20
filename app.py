@@ -20,7 +20,7 @@ def get_base64_image(image_path):
         # Fallback to a plain color if map.png is missing
         return ""
 
-map_bg = get_base64_image("map.png")
+map_bg = get_base64_image("map.jpg")
 
 # --- CUSTOM CSS: BIGGER BUTTONS, GREEN THEME & FROSTED MAP BACKGROUND ---
 st.markdown(f"""
