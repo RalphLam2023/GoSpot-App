@@ -9,6 +9,7 @@ import os
 import base64
 import folium
 from streamlit_folium import st_folium
+from geopy.geocoders import Nominatim
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="GoSpot | Smart Parking Platform", page_icon="🚗", layout="wide")
@@ -18,7 +19,7 @@ def get_base64_image(image_path):
     try:
         if os.path.exists(image_path):
             with open(image_path, "rb") as img_file:
-                return f"data:image/png;base64,{base64.b64encode(img_file.read()).decode()}"
+                return f"data:image/jpeg;base64,{base64.b64encode(img_file.read()).decode()}"
     except Exception:
         pass
     return ""
@@ -30,17 +31,14 @@ st.markdown(f"""
     <style>
     :root {{ --primary-color: #16a34a; }}
     
-    /* Force dark text for readability on light backgrounds (overrides Dark Mode) */
     .stApp p, .stApp div, .stApp span, .stApp label {{
         color: #1e293b !important;
     }}
     
-    /* Ensure metric values and specific components retain primary color */
     div[data-testid="stMetricValue"] > div {{
         color: #16a34a !important;
     }}
 
-    /* Real Local Map Background with a frosted glass overlay */
     .stApp {{
         background-image: linear-gradient(rgba(248, 250, 252, 0.85), rgba(248, 250, 252, 0.95)), 
                           url("{map_bg}");
@@ -49,7 +47,6 @@ st.markdown(f"""
         background-attachment: fixed;
     }}
 
-    /* Make the main content area stand out against the map background */
     [data-testid="stAppViewBlockContainer"] {{
         background-color: rgba(255, 255, 255, 0.95);
         border-radius: 20px;
@@ -59,7 +56,6 @@ st.markdown(f"""
         margin-bottom: 2rem;
     }}
 
-    /* Button Styling */
     div.stButton > button {{
         border-radius: 12px !important;
         font-weight: 700 !important;
@@ -88,7 +84,6 @@ st.markdown(f"""
         letter-spacing: 0.5px;
     }}
     
-    /* Headers Green */
     h1, h2, h3, h4 {{ color: #16a34a !important; font-weight: bold; }}
     </style>
 """, unsafe_allow_html=True)
@@ -136,17 +131,38 @@ def load_db():
                     "reviews": []
                 },
                 {
-                    "id": 2, "owner_name": "Ayala Property Mgmt", "name": "Legazpi Village Commercial Parking",
+                    "id": 2, "owner_name": "SM Prime Holdings", "name": "SM City Manila Multi-Level",
+                    "city": "Manila", "address": "Natividad Almeda-Lopez St, Ermita, Manila",
+                    "lat": 14.5874, "lon": 120.9816, "price": 50.0, "total_capacity": 300, 
+                    "current_free_slots": 85, "lighting": True, "cctv": True, "pwd": True, "commends": 112,
+                    "reviews": []
+                },
+                {
+                    "id": 3, "owner_name": "Ayala Property Mgmt", "name": "Legazpi Village Commercial Parking",
                     "city": "Makati", "address": "Salcedo St, Legazpi Village, Makati",
                     "lat": 14.5532, "lon": 121.0185, "price": 80.0, "total_capacity": 60, 
                     "current_free_slots": 22, "lighting": True, "cctv": True, "pwd": True, "commends": 34,
                     "reviews": []
                 },
                 {
-                    "id": 3, "owner_name": "QC LGU Admin", "name": "Timog Avenue Secure Lot",
+                    "id": 4, "owner_name": "Ayala Property Mgmt", "name": "Greenbelt 2 Basement Parking",
+                    "city": "Makati", "address": "Esperanza St, Greenbelt, Makati",
+                    "lat": 14.5524, "lon": 121.0189, "price": 75.0, "total_capacity": 150, 
+                    "current_free_slots": 40, "lighting": True, "cctv": True, "pwd": True, "commends": 89,
+                    "reviews": []
+                },
+                {
+                    "id": 5, "owner_name": "QC LGU Admin", "name": "Timog Avenue Secure Lot",
                     "city": "Quezon City", "address": "Timog Ave cor. Tomas Morato, Quezon City",
                     "lat": 14.6360, "lon": 121.0345, "price": 60.0, "total_capacity": 30, 
                     "current_free_slots": 5, "lighting": True, "cctv": True, "pwd": False, "commends": 9,
+                    "reviews": []
+                },
+                {
+                    "id": 6, "owner_name": "Ayala Malls", "name": "Trinoma Mindanao Ave Open Parking",
+                    "city": "Quezon City", "address": "Mindanao Ave, Triangle Park, Quezon City",
+                    "lat": 14.6534, "lon": 121.0345, "price": 50.0, "total_capacity": 200, 
+                    "current_free_slots": 120, "lighting": True, "cctv": True, "pwd": True, "commends": 55,
                     "reviews": []
                 }
             ],
@@ -158,6 +174,18 @@ def load_db():
 def save_db(db):
     with open(DB_FILE, "w") as f:
         json.dump(db, f, indent=4)
+
+# --- GEOCODING HELPER ---
+@st.cache_data
+def get_coordinates_from_address(address, city):
+    try:
+        geolocator = Nominatim(user_agent="gospot_prototype")
+        location = geolocator.geocode(f"{address}, {city}, Metro Manila, Philippines")
+        if location:
+            return location.latitude, location.longitude
+    except:
+        pass
+    return None
 
 # --- SESSION STATE INITIALIZATION ---
 if "role" not in st.session_state:
@@ -245,10 +273,38 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
     
     with tab1:
         st.write("### 1. Set Your Destination")
-        st.info("Click anywhere on the map to drop a pin, OR type your location below.")
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            destination_address = st.text_input("📍 Enter destination address manually:", placeholder="e.g. Rizal Park")
+        with col2:
+            target_city = st.selectbox("Destination City:", ["Manila", "Makati", "Quezon City"])
+
+        # Determine the base map coordinates dynamically
+        base_lat, base_lon = CITY_COORDINATES[target_city]
+        has_custom_pin = False
+
+        if destination_address:
+            coords = get_coordinates_from_address(destination_address, target_city)
+            if coords:
+                base_lat, base_lon = coords
+                has_custom_pin = True
+
+        st.info("The map syncs with your typed address automatically. You can also click directly on the map to drop a pin.")
         
         # INTERACTIVE MAP WIDGET
-        m = folium.Map(location=[14.6091, 121.0223], zoom_start=11)
+        m = folium.Map(location=[base_lat, base_lon], zoom_start=15) # Zoomed in closer
+        
+        # Add target marker if user typed a valid address
+        if has_custom_pin:
+            folium.Marker(
+                [base_lat, base_lon], 
+                popup=destination_address,
+                tooltip="📍 Your Target Destination",
+                icon=folium.Icon(color="red", icon="crosshairs", prefix="fa")
+            ).add_to(m)
+
+        # Map existing lots
         for lot in st.session_state.db["lots"]:
             folium.Marker(
                 [lot["lat"], lot["lon"]], 
@@ -257,19 +313,13 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
                 icon=folium.Icon(color="green", icon="info-sign")
             ).add_to(m)
 
-        map_data = st_folium(m, height=350, use_container_width=True)
+        map_data = st_folium(m, height=400, use_container_width=True)
         
-        pinned_lat, pinned_lon = None, None
+        # If the map is clicked, it overrides the search base
         if map_data and map_data.get("last_clicked"):
-            pinned_lat = map_data["last_clicked"]["lat"]
-            pinned_lon = map_data["last_clicked"]["lng"]
-            st.success(f"📍 Map Pin Dropped at: {pinned_lat:.4f}, {pinned_lon:.4f}")
-
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            destination_address = st.text_input("Or enter destination address manually:", placeholder="e.g. Intramuros Manila")
-        with col2:
-            target_city = st.selectbox("Fallback City:", ["Manila", "Makati", "Quezon City"])
+            base_lat = map_data["last_clicked"]["lat"]
+            base_lon = map_data["last_clicked"]["lng"]
+            st.success(f"📍 Manual Map Pin Dropped at: {base_lat:.4f}, {base_lon:.4f}")
 
         st.write("### 2. Set Arrival Details")
         col3, col4 = st.columns(2)
@@ -280,12 +330,7 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
 
         search_button = st.button("Search Nearest Parking", type="primary", use_container_width=True)
 
-        if search_button or destination_address or pinned_lat:
-            if pinned_lat and pinned_lon:
-                base_lat, base_lon = pinned_lat, pinned_lon
-            else:
-                base_lat, base_lon = CITY_COORDINATES[target_city]
-            
+        if search_button or destination_address or (map_data and map_data.get("last_clicked")):
             lots_display = []
             day_code_map = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6}
             city_code_map = {"Manila": 0, "Makati": 1, "Quezon City": 2}
@@ -305,7 +350,7 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
 
             lots_display = sorted(lots_display, key=lambda x: x["distance_km"])
             
-            location_label = "Pinned Map Location" if pinned_lat else (destination_address if destination_address else target_city)
+            location_label = destination_address if destination_address else "Pinned Location"
             st.markdown(f"### 🎯 Results Near: **{location_label}**")
 
             for lot in lots_display:
