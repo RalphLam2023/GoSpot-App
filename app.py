@@ -23,7 +23,7 @@ def get_base64_image(image_path):
         pass
     return ""
 
-map_bg = get_base64_image("map.png")
+map_bg = get_base64_image("map.jpg")
 
 # --- CUSTOM CSS: BIGGER BUTTONS, GREEN THEME, TEXT COLOR FIX ---
 st.markdown(f"""
