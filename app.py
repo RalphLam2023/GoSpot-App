@@ -6,14 +6,32 @@ import datetime
 import math
 import json
 import os
+import folium
+from streamlit_folium import st_folium
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="GoSpot | Smart Parking Platform", page_icon="🚗", layout="wide")
 
-# --- CUSTOM CSS: BIGGER BUTTONS & GREEN THEME ---
+# --- CUSTOM CSS: BIGGER BUTTONS, GREEN THEME & MAP BACKGROUND ---
 st.markdown("""
     <style>
     :root { --primary-color: #16a34a; }
+    
+    /* Subtle digital map/grid background for the whole app */
+    .stApp {
+        background-color: #f8fafc;
+        background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
+
+    /* Make main content boxes solid white so text remains readable over the grid */
+    .st-emotion-cache-1wmy9hl, .st-emotion-cache-1104q3j {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
     div.stButton > button {
         border-radius: 12px !important;
         font-weight: 700 !important;
@@ -38,11 +56,6 @@ st.markdown("""
         height: 100px !important;
         font-size: 28px !important;
         letter-spacing: 0.5px;
-    }
-    div.stButton > button[kind="secondary"]:hover {
-        border-color: #16a34a !important;
-        color: #16a34a !important;
-        background-color: #f0fdf4 !important;
     }
     h1, h2, h3, h4 { color: #14532d; }
     div[data-testid="stMetricValue"] { color: #16a34a !important; }
@@ -106,7 +119,7 @@ def load_db():
                     "reviews": []
                 }
             ],
-            "history": {} # Format: {"Username": [{"lot_id": 1, "timestamp": "..."}]}
+            "history": {}
         }
         save_db(default_db)
         return default_db
@@ -127,18 +140,17 @@ if "db" not in st.session_state:
 col_left, col_center, col_right = st.columns([2, 1, 2])
 with col_center:
     try:
-        st.image("logo.png", use_container_width=True) 
+        st.image("1.png", use_container_width=True) 
     except FileNotFoundError:
         st.markdown("<h1 style='text-align: center; color: #16a34a;'>🚗 GoSpot</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>AI-Powered Parking Availability & Prediction Platform</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #64748b; font-weight: bold;'>AI-Powered Parking Availability Platform</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-
 # ==========================================
-# PAGE 0: LANDING PAGE (ROLE SELECTION)
+# PAGE 0: LANDING PAGE
 # ==========================================
 if st.session_state.role is None:
-    st.markdown("<h2 style='text-align: center;'>I am a:</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; background: white; padding: 10px; border-radius: 10px; display: inline-block; margin: 0 auto;'>I am a:</h2>", unsafe_allow_html=True)
     st.write("") 
     
     col1, col2 = st.columns(2)
@@ -197,12 +209,37 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
     tab1, tab2 = st.tabs(["🔍 Find Parking", "🕒 Recent Parkings"])
     
     with tab1:
+        st.write("### 1. Set Your Destination")
+        st.info("Click anywhere on the map to drop a pin, OR type your location below.")
+        
+        # INTERACTIVE MAP
+        m = folium.Map(location=[14.6091, 121.0223], zoom_start=11)
+        # Show existing parkings on the map
+        for lot in st.session_state.db["lots"]:
+            folium.Marker(
+                [lot["lat"], lot["lon"]], 
+                popup=f"{lot['name']} - ₱{lot['price']}",
+                tooltip="🅿️ " + lot["name"],
+                icon=folium.Icon(color="green", icon="info-sign")
+            ).add_to(m)
+
+        map_data = st_folium(m, height=350, use_container_width=True)
+        
+        # Check if user clicked the map
+        pinned_lat, pinned_lon = None, None
+        if map_data and map_data.get("last_clicked"):
+            pinned_lat = map_data["last_clicked"]["lat"]
+            pinned_lon = map_data["last_clicked"]["lng"]
+            st.success(f"📍 Map Pin Dropped at: {pinned_lat:.4f}, {pinned_lon:.4f}")
+
+        # Text Fallback Inputs
         col1, col2 = st.columns([2, 1])
         with col1:
-            destination_address = st.text_input("📍 Enter your destination address:", placeholder="e.g. Intramuros Manila")
+            destination_address = st.text_input("Or enter destination address manually:", placeholder="e.g. Intramuros Manila")
         with col2:
-            target_city = st.selectbox("Select Target City:", ["Manila", "Makati", "Quezon City"])
+            target_city = st.selectbox("Fallback City:", ["Manila", "Makati", "Quezon City"])
 
+        st.write("### 2. Set Arrival Details")
         col3, col4 = st.columns(2)
         with col3:
             target_time = st.time_input("Expected Arrival Time", datetime.time(8, 0))
@@ -211,10 +248,14 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
 
         search_button = st.button("Search Nearest Parking", type="primary", use_container_width=True)
 
-        if search_button or destination_address:
-            base_lat, base_lon = CITY_COORDINATES[target_city]
-            lots_display = []
+        if search_button or destination_address or pinned_lat:
+            # Determine base coordinates (Pin > Address/City)
+            if pinned_lat and pinned_lon:
+                base_lat, base_lon = pinned_lat, pinned_lon
+            else:
+                base_lat, base_lon = CITY_COORDINATES[target_city]
             
+            lots_display = []
             day_code_map = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6}
             city_code_map = {"Manila": 0, "Makati": 1, "Quezon City": 2}
             time_minutes = target_time.hour * 60 + target_time.minute
@@ -232,7 +273,9 @@ elif st.session_state.role == 'driver' and st.session_state.user_name is not Non
                 lots_display.append({**lot, "distance_km": dist_km, "predicted_avail": availability_pct})
 
             lots_display = sorted(lots_display, key=lambda x: x["distance_km"])
-            st.markdown(f"### 🎯 Results Near: **{destination_address if destination_address else target_city}**")
+            
+            location_label = "Pinned Map Location" if pinned_lat else (destination_address if destination_address else target_city)
+            st.markdown(f"### 🎯 Results Near: **{location_label}**")
 
             for lot in lots_display:
                 with st.container():
@@ -334,7 +377,6 @@ elif st.session_state.role == 'owner' and st.session_state.user_name is not None
     st.markdown("---")
     st.subheader("Your Managed Listings")
     
-    # Filter listings to only show ones owned by the logged-in user
     my_lots = [lot for lot in st.session_state.db["lots"] if lot.get("owner_name") == st.session_state.user_name]
     
     if not my_lots:
@@ -360,10 +402,9 @@ elif st.session_state.role == 'owner' and st.session_state.user_name is not None
                             st.success("Listing updated successfully!")
                             st.rerun()
                     
-                    # Delete Button (Outside the form)
                     if st.button(f"🗑️ Delete '{lot['name']}'", key=f"del_{lot['id']}"):
                         st.session_state.db["lots"] = [L for L in st.session_state.db["lots"] if L["id"] != lot["id"]]
                         save_db(st.session_state.db)
                         st.warning("Listing deleted.")
                         st.rerun()
-            st.write("") # Spacing
+            st.write("")
