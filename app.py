@@ -41,8 +41,7 @@ st.markdown(f"""
         color: #16a34a !important;
     }}
 
-    /* Target the Expected Arrival Time specifically to make it white */
-    [data-testid="stTimeInput"] label p,
+    /* Target ONLY the input text inside the Time Input to make it white */
     [data-testid="stTimeInput"] input {{
         color: #ffffff !important;
     }}
